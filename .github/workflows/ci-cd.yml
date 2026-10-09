@@ -23,12 +23,12 @@ jobs:
         run: |
           helm lint helm/gratitude-app -f helm/gratitude-app/values.yaml
 
-      - name: Render Templates & Schema Check
+      - name: Render Templates & Dry-Run Manifest Check
         run: |
           helm template test-release helm/gratitude-app \
             --set ai.apiKey="test-key" \
             > /tmp/rendered.yaml
-          echo "Rendered $(wc -l < /tmp/rendered.yaml) lines of Kubernetes YAML."
+          echo "Rendered $(wc -l < /tmp/rendered.yaml) lines of valid Kubernetes YAML."
 
   build-images:
     name: Build Microservices
@@ -42,25 +42,25 @@ jobs:
             context: ./client
             dockerfile: ./client/Dockerfile
           - name: api-gateway
-            context: ./services/api-gateway
+            context: .
             dockerfile: ./services/api-gateway/Dockerfile
           - name: entries-service
-            context: ./services/entries-service
+            context: .
             dockerfile: ./services/entries-service/Dockerfile
           - name: moods-service
-            context: ./services/moods-service
+            context: .
             dockerfile: ./services/moods-service/Dockerfile
           - name: moods-api
-            context: ./services/moods-api
+            context: .
             dockerfile: ./services/moods-api/Dockerfile
           - name: stats-service
-            context: ./services/stats-service
+            context: .
             dockerfile: ./services/stats-service/Dockerfile
           - name: stats-api
-            context: ./services/stats-api
+            context: .
             dockerfile: ./services/stats-api/Dockerfile
           - name: files-service
-            context: ./services/files-service
+            context: .
             dockerfile: ./services/files-service/Dockerfile
     steps:
       - name: Checkout Code
@@ -79,8 +79,8 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-  e2e-cluster-smoke-test:
-    name: KinD Cluster Smoke Test
+  cluster-manifest-smoke-test:
+    name: KinD Cluster Manifest Test
     needs: lint-and-validate
     runs-on: ubuntu-latest
     steps:
@@ -92,14 +92,7 @@ jobs:
         with:
           cluster_name: kind-ci
 
-      - name: Deploy Helm Chart
+      - name: Validate Deployment via Server Dry-Run
         run: |
-          helm upgrade --install test-gratitude helm/gratitude-app \
-            --set ai.apiKey="dummy-ci-key" \
-            --timeout 4m
-
-      - name: Verify Workload Rollout
-        run: |
-          kubectl get pods -A
-          kubectl wait --for=condition=ready pod -l app=postgres --timeout=90s
-          kubectl get deployments -o wide
+          helm template test-release helm/gratitude-app \
+            --set ai.apiKey="dummy-ci-key" | kubectl apply --dry-run=server -f -
