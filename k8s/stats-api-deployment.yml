@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: stats-api-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      component: stats-api
+  template:
+    metadata:
+      labels:
+        component: stats-api
+    spec:
+      containers:
+        - name: stats-api
+          image: prashantdey/merndemoapp:statsapiv1.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 5003
+          env:
+            - name: PORT
+              value: "5003"
+            - name: STATS_SERVICE_ADDR
+              value: "stats-service-cluster-ip-service:50053"
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "64Mi"
+            limits:
+              cpu: "250m"
+              memory: "256Mi"
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 5003
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 5003
+            initialDelaySeconds: 5
+            periodSeconds: 5

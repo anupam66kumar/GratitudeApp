@@ -1,0 +1,65 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-init-sql
+data:
+  init.sql: |
+    CREATE TABLE IF NOT EXISTS entries (
+      id SERIAL PRIMARY KEY,
+      text TEXT NOT NULL,
+      created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE TABLE IF NOT EXISTS moods (
+      id SERIAL PRIMARY KEY,
+      mood VARCHAR(64) NOT NULL,
+      note TEXT,
+      created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    );
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ .Release.Name }}-db-migration-{{ .Release.Revision }}
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-delete-policy": before-hook-creation
+spec:
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: migrate
+          image: postgres:15-alpine
+          command:
+            - /bin/sh
+            - -c
+            - |
+              export PGPASSWORD=$POSTGRES_PASSWORD
+              until pg_isready -h postgres-cluster-ip-service -p 5432 -U $POSTGRES_USER; do
+                echo "Waiting for postgres..."
+                sleep 2
+              done
+              psql -h postgres-cluster-ip-service -U $POSTGRES_USER -d $POSTGRES_DB -f /sql/init.sql
+          env:
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: database-secret
+                  key: PGUSER
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: database-secret
+                  key: PGPASSWORD
+            - name: POSTGRES_DB
+              valueFrom:
+                secretKeyRef:
+                  name: database-secret
+                  key: PGDATABASE
+          volumeMounts:
+            - name: sql-script
+              mountPath: /sql
+      volumes:
+        - name: sql-script
+          configMap:
+            name: postgres-init-sql

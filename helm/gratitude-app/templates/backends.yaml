@@ -1,0 +1,212 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: entries-deployment
+spec:
+  replicas: {{ .Values.services.entries.replicas }}
+  selector:
+    matchLabels:
+      app: entries
+  template:
+    metadata:
+      labels:
+        app: entries
+    spec:
+      containers:
+        - name: entries
+          image: {{ .Values.services.entries.image }}
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: {{ .Values.services.entries.port }}
+          env:
+            - name: PORT
+              value: "{{ .Values.services.entries.port }}"
+            - name: PGUSER
+              valueFrom:
+                secretKeyRef:
+                  name: database-secret
+                  key: PGUSER
+            - name: PGHOST
+              valueFrom:
+                secretKeyRef:
+                  name: database-secret
+                  key: PGHOST
+            - name: PGDATABASE
+              valueFrom:
+                secretKeyRef:
+                  name: database-secret
+                  key: PGDATABASE
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: database-secret
+                  key: PGPASSWORD
+            - name: PGPORT
+              valueFrom:
+                secretKeyRef:
+                  name: database-secret
+                  key: PGPORT
+          livenessProbe:
+            tcpSocket:
+              port: {{ .Values.services.entries.port }}
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          readinessProbe:
+            tcpSocket:
+              port: {{ .Values.services.entries.port }}
+            initialDelaySeconds: 5
+            periodSeconds: 5
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: entries-cluster-ip-service
+spec:
+  type: ClusterIP
+  selector:
+    app: entries
+  ports:
+    - port: {{ .Values.services.entries.port }}
+      targetPort: {{ .Values.services.entries.port }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: moods-service-deployment
+spec:
+  replicas: {{ .Values.services.moodsService.replicas }}
+  selector:
+    matchLabels:
+      component: moods-service
+  template:
+    metadata:
+      labels:
+        component: moods-service
+    spec:
+      containers:
+        - name: moods-service
+          image: {{ .Values.services.moodsService.image }}
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: {{ .Values.services.moodsService.port }}
+          env:
+            - name: PORT
+              value: "{{ .Values.services.moodsService.port }}"
+            - name: PGUSER
+              valueFrom:
+                secretKeyRef:
+                  name: database-secret
+                  key: PGUSER
+            - name: PGHOST
+              valueFrom:
+                secretKeyRef:
+                  name: database-secret
+                  key: PGHOST
+            - name: PGDATABASE
+              valueFrom:
+                secretKeyRef:
+                  name: database-secret
+                  key: PGDATABASE
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: database-secret
+                  key: PGPASSWORD
+            - name: PGPORT
+              valueFrom:
+                secretKeyRef:
+                  name: database-secret
+                  key: PGPORT
+          livenessProbe:
+            tcpSocket:
+              port: {{ .Values.services.moodsService.port }}
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          readinessProbe:
+            tcpSocket:
+              port: {{ .Values.services.moodsService.port }}
+            initialDelaySeconds: 5
+            periodSeconds: 5
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: moods-service-cluster-ip-service
+spec:
+  type: ClusterIP
+  selector:
+    component: moods-service
+  ports:
+    - port: {{ .Values.services.moodsService.port }}
+      targetPort: {{ .Values.services.moodsService.port }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: stats-service-deployment
+spec:
+  replicas: {{ .Values.services.statsService.replicas }}
+  selector:
+    matchLabels:
+      component: stats-service
+  template:
+    metadata:
+      labels:
+        component: stats-service
+    spec:
+      containers:
+        - name: stats-service
+          image: {{ .Values.services.statsService.image }}
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: {{ .Values.services.statsService.port }}
+          env:
+            - name: PORT
+              value: "{{ .Values.services.statsService.port }}"
+            - name: PGUSER
+              valueFrom:
+                secretKeyRef:
+                  name: database-secret
+                  key: PGUSER
+            - name: PGHOST
+              valueFrom:
+                secretKeyRef:
+                  name: database-secret
+                  key: PGHOST
+            - name: PGDATABASE
+              valueFrom:
+                secretKeyRef:
+                  name: database-secret
+                  key: PGDATABASE
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: database-secret
+                  key: PGPASSWORD
+            - name: PGPORT
+              valueFrom:
+                secretKeyRef:
+                  name: database-secret
+                  key: PGPORT
+          livenessProbe:
+            tcpSocket:
+              port: {{ .Values.services.statsService.port }}
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          readinessProbe:
+            tcpSocket:
+              port: {{ .Values.services.statsService.port }}
+            initialDelaySeconds: 5
+            periodSeconds: 5
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: stats-service-cluster-ip-service
+spec:
+  type: ClusterIP
+  selector:
+    component: stats-service
+  ports:
+    - port: {{ .Values.services.statsService.port }}
+      targetPort: {{ .Values.services.statsService.port }}

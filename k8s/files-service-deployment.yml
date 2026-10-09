@@ -1,0 +1,35 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: files-service-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: files-service
+  template:
+    metadata:
+      labels:
+        app: files-service
+    spec:
+      containers:
+        - name: files-service
+          image: gratitudeapp-files-service:local
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 5004
+          env:
+            - name: PORT
+              value: "5004"
+            - name: AWS_REGION
+              value: "us-east-1"
+            - name: S3_BUCKET
+              value: "gratitude"
+            - name: S3_ENDPOINT
+              value: "http://minio-service:9000"
+            - name: AWS_ACCESS_KEY_ID
+              value: "minioadmin"
+            - name: AWS_SECRET_ACCESS_KEY
+              value: "minioadmin"
+            - name: S3_FORCE_PATH_STYLE
+              value: "true"

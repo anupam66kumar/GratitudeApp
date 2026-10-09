@@ -1,0 +1,58 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: moods-service-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      component: moods-service
+  template:
+    metadata:
+      labels:
+        component: moods-service
+    spec:
+      containers:
+        - name: moods-service
+          image: gratitudeapp-moods-service:local
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 50052
+          env:
+            - name: PORT
+              value: "50052"
+            - name: PGUSER
+              valueFrom:
+                secretKeyRef:
+                  name: database-secret
+                  key: PGUSER
+            - name: PGHOST
+              valueFrom:
+                secretKeyRef:
+                  name: database-secret
+                  key: PGHOST
+            - name: PGDATABASE
+              valueFrom:
+                secretKeyRef:
+                  name: database-secret
+                  key: PGDATABASE
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: database-secret
+                  key: PGPASSWORD
+            - name: PGPORT
+              valueFrom:
+                secretKeyRef:
+                  name: database-secret
+                  key: PGPORT
+          livenessProbe:
+            tcpSocket:
+              port: 50052
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          readinessProbe:
+            tcpSocket:
+              port: 50052
+            initialDelaySeconds: 5
+            periodSeconds: 5

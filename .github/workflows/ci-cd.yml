@@ -1,0 +1,105 @@
+name: CI/CD Pipeline - GratitudeApp
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  pull_request:
+    branches: [ "main", "master" ]
+
+jobs:
+  lint-and-validate:
+    name: Lint & Validate Helm Chart
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: v3.14.0
+
+      - name: Helm Lint
+        run: |
+          helm lint helm/gratitude-app -f helm/gratitude-app/values.yaml
+
+      - name: Render Templates & Schema Check
+        run: |
+          helm template test-release helm/gratitude-app \
+            --set ai.apiKey="test-key" \
+            > /tmp/rendered.yaml
+          echo "Rendered $(wc -l < /tmp/rendered.yaml) lines of Kubernetes YAML."
+
+  build-images:
+    name: Build Microservices
+    needs: lint-and-validate
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        service:
+          - name: client
+            context: ./client
+            dockerfile: ./client/Dockerfile
+          - name: api-gateway
+            context: ./services/api-gateway
+            dockerfile: ./services/api-gateway/Dockerfile
+          - name: entries-service
+            context: ./services/entries-service
+            dockerfile: ./services/entries-service/Dockerfile
+          - name: moods-service
+            context: ./services/moods-service
+            dockerfile: ./services/moods-service/Dockerfile
+          - name: moods-api
+            context: ./services/moods-api
+            dockerfile: ./services/moods-api/Dockerfile
+          - name: stats-service
+            context: ./services/stats-service
+            dockerfile: ./services/stats-service/Dockerfile
+          - name: stats-api
+            context: ./services/stats-api
+            dockerfile: ./services/stats-api/Dockerfile
+          - name: files-service
+            context: ./services/files-service
+            dockerfile: ./services/files-service/Dockerfile
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Service Image (${{ matrix.service.name }})
+        uses: docker/build-push-action@v5
+        with:
+          context: ${{ matrix.service.context }}
+          file: ${{ matrix.service.dockerfile }}
+          push: false
+          tags: gratitudeapp-${{ matrix.service.name }}:test
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  e2e-cluster-smoke-test:
+    name: KinD Cluster Smoke Test
+    needs: lint-and-validate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Create KinD Cluster
+        uses: helm/kind-action@v1.9.0
+        with:
+          cluster_name: kind-ci
+
+      - name: Deploy Helm Chart
+        run: |
+          helm upgrade --install test-gratitude helm/gratitude-app \
+            --set ai.apiKey="dummy-ci-key" \
+            --timeout 4m
+
+      - name: Verify Workload Rollout
+        run: |
+          kubectl get pods -A
+          kubectl wait --for=condition=ready pod -l app=postgres --timeout=90s
+          kubectl get deployments -o wide

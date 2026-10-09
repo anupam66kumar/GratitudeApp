@@ -1,0 +1,39 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ .Release.Name }}-create-bucket-{{ .Release.Revision }}
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-delete-policy": before-hook-creation
+spec:
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: create-bucket
+          image: {{ .Values.services.filesService.image }}
+          imagePullPolicy: IfNotPresent
+          command:
+            - node
+            - -e
+            - |
+              const { S3Client, CreateBucketCommand } = require("@aws-sdk/client-s3");
+              const client = new S3Client({
+                endpoint: "http://minio-service:9000",
+                region: "us-east-1",
+                credentials: {
+                  accessKeyId: {{ .Values.services.minio.rootUser | quote }},
+                  secretAccessKey: {{ .Values.services.minio.rootPassword | quote }}
+                },
+                forcePathStyle: true
+              });
+              client.send(new CreateBucketCommand({ Bucket: "gratitude-uploads" }))
+                .then(() => console.log("Bucket ready"))
+                .catch(err => {
+                  if (err.name === "BucketAlreadyOwnedByYou" || err.Code === "BucketAlreadyOwnedByYou") {
+                    console.log("Bucket already exists");
+                  } else {
+                    console.error(err.message);
+                    process.exit(1);
+                  }
+                });

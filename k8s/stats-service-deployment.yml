@@ -1,0 +1,65 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: stats-service-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      component: stats-service
+  template:
+    metadata:
+      labels:
+        component: stats-service
+    spec:
+      containers:
+        - name: stats-service
+          image: gratitudeapp-stats-service:local
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 50053
+          env:
+            - name: PORT
+              value: "50053"
+            - name: PGUSER
+              valueFrom:
+                secretKeyRef:
+                  name: database-secret
+                  key: PGUSER
+            - name: PGHOST
+              valueFrom:
+                secretKeyRef:
+                  name: database-secret
+                  key: PGHOST
+            - name: PGDATABASE
+              valueFrom:
+                secretKeyRef:
+                  name: database-secret
+                  key: PGDATABASE
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: database-secret
+                  key: PGPASSWORD
+            - name: PGPORT
+              valueFrom:
+                secretKeyRef:
+                  name: database-secret
+                  key: PGPORT
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "64Mi"
+            limits:
+              cpu: "250m"
+              memory: "256Mi"
+          livenessProbe:
+            tcpSocket:
+              port: 50053
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          readinessProbe:
+            tcpSocket:
+              port: 50053
+            initialDelaySeconds: 5
+            periodSeconds: 5

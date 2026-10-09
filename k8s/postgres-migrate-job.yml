@@ -1,0 +1,28 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: postgres-migrate-moods
+spec:
+  template:
+    spec:
+      containers:
+        - name: postgres-migrate
+          image: postgres:15-alpine
+          imagePullPolicy: IfNotPresent
+          command:
+            - sh
+            - -c
+            - |
+              until pg_isready -h postgres-cluster-ip-service -p 5432 -U postgres; do
+                echo "Waiting for postgres...";
+                sleep 2;
+              done;
+              psql -h postgres-cluster-ip-service -U postgres -d postgres -c "CREATE TABLE IF NOT EXISTS moods (id SERIAL PRIMARY KEY, mood VARCHAR(50) NOT NULL, note VARCHAR(240), created_at TIMESTAMPTZ DEFAULT NOW());"
+          env:
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: database-secret
+                  key: PGPASSWORD
+      restartPolicy: OnFailure
+  backoffLimit: 4
