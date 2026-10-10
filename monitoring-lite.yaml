@@ -4,9 +4,6 @@ defaultRules:
 grafana:
   adminPassword: "admin"
   defaultDashboardsEnabled: false
-  persistence:
-    enabled: true
-    size: 2Gi
   service:
     type: ClusterIP
     port: 80
@@ -17,6 +14,22 @@ grafana:
     requests:
       cpu: 100m
       memory: 256Mi
+  livenessProbe:
+    httpGet:
+      path: /api/health
+      port: 3000
+    initialDelaySeconds: 120
+    periodSeconds: 30
+    timeoutSeconds: 15
+    failureThreshold: 10
+  readinessProbe:
+    httpGet:
+      path: /api/health
+      port: 3000
+    initialDelaySeconds: 60
+    periodSeconds: 15
+    timeoutSeconds: 15
+    failureThreshold: 10
   sidecar:
     dashboards:
       enabled: false
@@ -37,11 +50,13 @@ prometheus:
     retention: 6h
     resources:
       limits:
-        cpu: 500m
-        memory: 512Mi
+        cpu: 800m
+        memory: 768Mi
       requests:
-        cpu: 100m
-        memory: 256Mi
+        cpu: 150m
+        memory: 384Mi
+    # Prevent Prometheus probe timeouts under load
+    probeTimeoutSeconds: 15
 
 alertmanager:
   enabled: false
