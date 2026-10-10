@@ -1,0 +1,52 @@
+prometheus:
+  prometheusSpec:
+    retention: 2h
+    scrapeInterval: 30s
+    evaluationInterval: 30s
+    resources:
+      requests:
+        cpu: 100m
+        memory: 256Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+
+alertmanager:
+  alertmanagerSpec:
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        cpu: 200m
+        memory: 128Mi
+
+grafana:
+  adminPassword: "admin"
+  readinessProbe:
+    initialDelaySeconds: 60
+    failureThreshold: 30
+    periodSeconds: 10
+  livenessProbe:
+    initialDelaySeconds: 90
+    failureThreshold: 30
+    periodSeconds: 10
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 384Mi
+
+kubeControllerManager:
+  enabled: false
+
+kubeScheduler:
+  enabled: false
+
+kubeEtcd:
+  enabled: false
+
+kubeProxy:
+  enabled: false

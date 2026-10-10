@@ -1,0 +1,32 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: k8s-cluster-healer
+  namespace: default
+  labels:
+    app: k8s-cluster-healer
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: k8s-cluster-healer
+  template:
+    metadata:
+      labels:
+        app: k8s-cluster-healer
+    spec:
+      serviceAccountName: k8s-cluster-healer-sa
+      containers:
+      - name: healer
+        image: k8s-cluster-healer:v1.0
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: TARGET_NAMESPACE
+          value: "default"
+        resources:
+          limits:
+            cpu: 100m
+            memory: 128Mi
+          requests:
+            cpu: 20m
+            memory: 32Mi
